@@ -47,4 +47,9 @@ class Context:
     def clone(self, parent):
         ctx = Context(parent=parent)
         ctx.stream = self.stream
+
+        for name, value in self._attributes.items():
+            if name not in ["parent", "stream"]:
+                ctx.set(name, value)
+
         return ctx

@@ -15,10 +15,12 @@ class TestContext(unittest.IsolatedAsyncioTestCase):
         cx = cm.get("context")
 
         with Context() as ctx:
+            ctx.object_in_context = "this is value in context"
             success = await cx.run(ctx, state)
 
             self.assertEqual(state.get("context_from_case_b"), 2)
             self.assertEqual(state.get("context_from_case_c"), 2)
+            self.assertEqual(state.get("object_in_context"), "this is value in context")
             self.assertEqual(success, True)
 
 
