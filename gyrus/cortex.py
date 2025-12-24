@@ -38,7 +38,7 @@ class Cortex(object):
 
         self._increment_in_degree()
 
-        for name, node in self.nodes.items():
+        for node in self.nodes.values():
             if node.in_degree == 0:
                 return True
 
@@ -51,6 +51,7 @@ class Cortex(object):
             return await self._schedule_loop(ctx, state, runtime)
         except CortexException as e:
             ctx.status = e.status
+            ctx.status_message = e.message
         except Exception as e:
             ctx.status = Status.RUN_TIME_ERROR
             raise e
@@ -164,21 +165,21 @@ class Cortex(object):
         ]
 
         for name in nodes_to_complete:
-            status = self._add_completed(name, runtime)
+            status, message = self._add_completed(name, runtime)
 
             if status == Status.NODE_CANCELLED:
                 continue
 
             if status != Status.SUCCESS:
-                raise CortexException(status)
+                raise CortexException(status, message)
 
-    def _add_completed(self, name: str, runtime: Runtime) -> Status:
-        status = runtime.add_completed(self.nodes[name])
+    def _add_completed(self, name: str, runtime: Runtime) -> tuple[Status, str]:
+        status, message = runtime.add_completed(self.nodes[name])
 
         if status in [Status.SUCCESS, Status.NODE_CANCELLED]:
             runtime.on_node_completed(name, self.nodes, self.nexts)
 
-        return status
+        return status, message
 
     def _process_events(self, runtime):
         for name, node in self.nodes.items():

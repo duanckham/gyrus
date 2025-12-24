@@ -56,7 +56,15 @@ class Runtime(object):
         self.waiting[name] = Node(nodes[name], nexts[name], parent=parent)
         return True
 
-    def add_running(self, ctx: Context, state: State, name: str, executor, nodes: Optional[Dict] = None, nexts: Optional[Dict] = None) -> bool:
+    def add_running(
+        self,
+        ctx: Context,
+        state: State,
+        name: str,
+        executor,
+        nodes: Optional[Dict] = None,
+        nexts: Optional[Dict] = None,
+    ) -> bool:
         if name in self.running:
             raise CortexException(
                 Status.RUN_TIME_ERROR, f"node({name}) has been already in running"
@@ -86,16 +94,27 @@ class Runtime(object):
     def get_running(self) -> list:
         return self.running.values()
 
-    def get_task_status(self, task) -> Status:
+    def get_task_status(self, task) -> tuple[Status, str]:
         if task.cancelled():
-            return Status.NODE_CANCELLED
+            return Status.NODE_CANCELLED, "Node execution cancelled"
 
-        if task.exception() is not None or task.result() is False:
-            return Status.NODE_EXECUTE_FAIL
+        exception = task.exception()
+        if exception is not None:
+            # Convert exception object to string representation
+            exception_str = str(exception)
+            if not exception_str:
+                exception_str = repr(exception)
+            return Status.NODE_EXECUTE_FAIL, exception_str
 
-        return Status.SUCCESS
+        if task.result() is False:
+            return (
+                Status.NODE_EXECUTE_FAIL,
+                "Node execution failed without exception details",
+            )
 
-    def add_completed(self, node: Processor) -> Status:
+        return Status.SUCCESS, "Node execution successful"
+
+    def add_completed(self, node: Processor) -> tuple[Status, str]:
         if node.name in self.completed and not node.reentrant:
             raise CortexException(
                 Status.RUN_TIME_ERROR,
@@ -103,10 +122,10 @@ class Runtime(object):
             )
 
         task = self.running.pop(node.name)
-        status = self.get_task_status(task)
+        status, message = self.get_task_status(task)
 
         self.completed[node.name] = status
-        return status
+        return status, message
 
     def on_node_completed(self, name: str, nodes: Dict, nexts: Dict) -> bool:
         if name not in nexts:
