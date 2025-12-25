@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 import time
 
 from .class_factory import ClassFactory
@@ -132,12 +133,22 @@ class Cortex(object):
     ) -> bool:
         self._initialize_nodes(runtime)
 
-        while runtime.has_pending_nodes():
-            self._schedule_nodes(ctx, state, runtime)
-            await self._execute_nodes(runtime)
+        error = None
 
-        # Close the output channel.
-        ctx.stream.close()
+        try:
+            while runtime.has_pending_nodes():
+                self._schedule_nodes(ctx, state, runtime)
+                await self._execute_nodes(runtime)
+        except Exception as e:
+            error = e
+
+        # Safe check before accessing stream
+        if hasattr(ctx, "_attributes") and "stream" in ctx._attributes:
+            ctx.stream.close()
+
+        if error:
+            raise error
+
         return True
 
     def _initialize_nodes(self, runtime: Runtime):
