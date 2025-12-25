@@ -52,14 +52,10 @@ class Cortex(object):
             return await self._schedule_loop(ctx, state, runtime)
         except CortexException as e:
             ctx.status = e.status
-            ctx.status_message = e.message
+            raise Exception(e.message)
         except Exception as e:
             ctx.status = Status.RUN_TIME_ERROR
             raise e
-
-        # Close the stream.
-        ctx.stream.close()
-        return False
 
     async def executor(self, ctx: Context, node: Node, state: State):
         logging.debug(f"processor begin, name:{node.processor.name}")
@@ -131,11 +127,10 @@ class Cortex(object):
     async def _schedule_loop(
         self, ctx: Context, state: State, runtime: Runtime
     ) -> bool:
-        self._initialize_nodes(runtime)
-
         error = None
 
         try:
+            self._initialize_nodes(runtime)
             while runtime.has_pending_nodes():
                 self._schedule_nodes(ctx, state, runtime)
                 await self._execute_nodes(runtime)

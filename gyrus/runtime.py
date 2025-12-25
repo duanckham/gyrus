@@ -92,7 +92,7 @@ class Runtime(object):
         return True
 
     def get_running(self) -> list:
-        return self.running.values()
+        return list(self.running.values())
 
     def get_task_status(self, task) -> tuple[Status, str]:
         if task.cancelled():
